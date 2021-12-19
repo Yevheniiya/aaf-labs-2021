@@ -42,7 +42,7 @@ class Node:
             print('New Node is created!')
         else: print('The Node was not created')
     def print_Node(self):
-        print('[',self.data.x,',',self.data.y,']')
+        return '[' + str(self.data.x) + ', ' + str(self.data.y) + ']'
 #складається з:
 # - data have to be an Interval -- done
 # - вказівника на лівого нащадка -- done
@@ -50,9 +50,13 @@ class Node:
 # - вказівника на предка -- done
 # за замовчуванням усі вказівники вказують на нон, бо нода створюється окремо від дерева.
 class KD_Tree:
-    # function add_node -- done
-    #function show -- done, but shows tree not in pretty way
-    #function contains ---- but shows a message only if found (have to implement some return mechanism in the case if the tree doesnt contain provided interval)
+    #function search:
+        # contained by -- done
+        # right of -- done
+        # intersects
+    #function add_node -- done
+    #function show -- done
+    #function contains -- done
     #consists of root + leafs - root is stored within datastructure
     def _check(self, user_data): #function to check what data type we`re transferring.
         if isinstance(user_data, Node):
@@ -137,30 +141,129 @@ class KD_Tree:
         NewNode=Node(user_data) # create new node
         self.__go_func(NewNode, self.root, True)
 #---------------------------------------------------------------------------
-# chained functions to show tree  --------- not in pretty way
-    def __go_show(self, currentNode, indent):
-        if(currentNode.left_child != None or currentNode.right_child != None): # if exists at least 1 child
-            currentNode.print_Node()
-            if(currentNode.right_child != None):self.__go_show(currentNode.right_child, 0)
-            if (currentNode.left_child != None): self.__go_show(currentNode.left_child, 0)
-        else: # no children
-            currentNode.print_Node()
-    def show(self):
-        self.__go_show(self.root, 0)
+# chained functions to show tree
+    def print(self):
+        buffer = []
+        self.__print_recursive(self.root, buffer, "", "")
+        print("\n".join(buffer))
+
+    def __print_recursive(self, node, buffer, prefix, childrenPrefix):
+        buffer.append(prefix + node.print_Node())
+
+        if node.right_child != None:
+            if node.left_child != None:
+                self.__print_recursive(node.right_child, buffer, childrenPrefix + "├── ", childrenPrefix + "│   ")
+            else:
+                self.__print_recursive(node.right_child, buffer, childrenPrefix + "└── ", childrenPrefix + "    ")
+        if node.left_child != None:
+            self.__print_recursive(node.left_child, buffer, childrenPrefix + "└── ", childrenPrefix + "    ")
+
 #---------------------------------------------------------------------------
-#chained functions to find an interval ---- but shows a message only if found (have to implement some return mechanism in the case if the tree doesnt contain provided interval)
+#chained functions to find an interval in Tree
     def __go_find(self, currentNode, FindNode):
         if (currentNode.left_child != None or currentNode.right_child != None):  # if exists at least 1 child
             if(currentNode.data.x==FindNode.data.x and currentNode.data.y==FindNode.data.y):
-                print('The KD-Tree contains this interval')
-            if (currentNode.right_child != None): self.__go_find(currentNode.right_child, FindNode)
-            if (currentNode.left_child != None): self.__go_find(currentNode.left_child, FindNode)
+                return True
+            found=False
+            if (currentNode.right_child != None and not found): found = self.__go_find(currentNode.right_child, FindNode)
+            if (currentNode.left_child != None and not found): found = self.__go_find(currentNode.left_child, FindNode)
+            return found
         else:  # no children
             if(currentNode.data.x==FindNode.data.x and currentNode.data.y==FindNode.data.y):
-                print('The KD-Tree contains this interval')
+                return True
     def contains(self, user_data):
         FindNode = Node(user_data)
-        self.__go_find(self.root, FindNode)
+        found = self.__go_find(self.root, FindNode)
+        if found:
+            print('The KD-Tree contains this interval')
+            return True
+        else:
+            print('The KD-Tree doesn`t contain this interval')
+            return False
+
+# ---------------------------------------------------------------------------
+# search functions
+    def __go_search_contained(self, currentNode, overNode, foundNodes, XY_f):
+        XY=XY_f
+        #check this node
+        if(currentNode.data.x >= overNode.data.x and currentNode.data.y <= overNode.data.y):
+            foundNodes.append(currentNode)
+        #if exists at least one child - move on
+        if(currentNode.right_child != None or currentNode.left_child != None):
+            if XY:#if checking by x
+                if(currentNode.data.x >= overNode.data.y and currentNode.left_child != None): # doesn`t intersect each other - no sense in going to right child - should go ONLY to the left child
+                    self.__go_search_contained(currentNode.left_child, overNode, foundNodes, not XY)
+                elif(currentNode.data.x <= overNode.data.x and currentNode.right_child != None): # no need to go to the left child if current is already lower than searched, because on the left there only lower and lower items
+                    self.__go_search_contained(currentNode.right_child, overNode, foundNodes, not XY)
+                else:
+                    if(currentNode.right_child != None):self.__go_search_contained(currentNode.right_child, overNode, foundNodes, not XY)
+                    if(currentNode.left_child != None):self.__go_search_contained(currentNode.left_child, overNode, foundNodes, not XY)
+            else: # if checking by y
+                if (currentNode.data.y <= overNode.data.x and currentNode.right_child != None):  # doesn`t intersect each other - no sense in going to left child - should go ONLY to the right child
+                    self.__go_search_contained(currentNode.right_child, overNode, foundNodes, not XY)
+                elif(currentNode.data.y >= overNode.data.y and currentNode.left_child != None): # no sense to go to the right child if current y is bigger that searched - go on the left
+                    self.__go_search_contained(currentNode.left_child, overNode, foundNodes, not XY)
+                else:
+                    if(currentNode.right_child != None):self.__go_search_contained(currentNode.right_child, overNode, foundNodes, not XY)
+                    if(currentNode.left_child != None):self.__go_search_contained(currentNode.left_child, overNode, foundNodes, not XY)
+        return foundNodes
+
+    def __go_search_intersects(self, currentNode, overNode, foundNodes, XY_f):
+        XY=XY_f
+        if(overNode.data.x<=currentNode.data.y and overNode.data.y>=currentNode.data.x):
+            foundNodes.append(currentNode)
+        if XY: # check by X
+            if(currentNode.data.x > overNode.data.y): # doesnt intersect each other - no sense to go on the right
+                if(currentNode.left_child != None): self.__go_search_intersects(currentNode.left_child, overNode, foundNodes, not XY)
+            else:
+                if (currentNode.left_child != None): self.__go_search_intersects(currentNode.left_child, overNode, foundNodes, not XY)
+                if (currentNode.right_child != None): self.__go_search_intersects(currentNode.right_child, overNode, foundNodes, not XY)
+        else:
+            if(currentNode.data.y < overNode.data.x):
+                if(currentNode.right_child != None): self.__go_search_intersects(currentNode.right_child, overNode, foundNodes, not XY)
+            else:
+                if (currentNode.left_child != None): self.__go_search_intersects(currentNode.left_child, overNode, foundNodes, not XY)
+                if (currentNode.right_child != None): self.__go_search_intersects(currentNode.right_child, overNode,foundNodes, not XY)
+        return foundNodes
+
+    def search(self, user_data, whattodo):
+        UserNode = Node(user_data)
+        nodes=[]
+        if (whattodo=="contained_by"):
+            FoundNodes=self.__go_search_contained(self.root, UserNode, nodes, True)
+        if(whattodo=="intersects"):
+            FoundNodes=self.__go_search_intersects(self.root, UserNode, nodes, True)
+        for i in range(0, len(FoundNodes)):
+            print(FoundNodes[i].print_Node())
+
+# ---------------------------------------------------------------------------
+# right of functions
+
+    def __go_search_right(self, currentNode, key, foundNodes, XY_f):
+        XY=XY_f
+        if(currentNode.data.x>=key):
+            foundNodes.append(currentNode)
+        if XY: # checked by X level
+            if (currentNode.data.x >= key):
+                    # if current x was on the right of key, have to check both children
+                    if (currentNode.right_child != None): self.__go_search_right(currentNode.right_child, key, foundNodes, not XY)
+                    if (currentNode.left_child != None): self.__go_search_right(currentNode.left_child, key, foundNodes, not XY)
+             # если текущий узел не прошёл проверку - влево можно даже не идти, так как там находятся х которые только меньше текущего. Не работает для уровней, где сравнение происходило по у
+            else:
+                if(currentNode.right_child != None): self.__go_search_right(currentNode.right_child, key, foundNodes, not XY)
+        else: #checked by Y level
+            if (currentNode.data.y <= key): # go only to the right
+                if(currentNode.right_child != None): self.__go_search_right(currentNode.right_child.key, foundNodes, not XY)
+            else: #check both
+                if (currentNode.right_child != None): self.__go_search_right(currentNode.right_child, key, foundNodes,not XY)
+                if (currentNode.left_child != None): self.__go_search_right(currentNode.left_child, key, foundNodes,not XY)
+        return foundNodes
+
+    def right_of(self, user_data):
+        nodes = []
+        FoundNodes = self.__go_search_right(self.root, user_data, nodes, True)
+        for i in range(0, len(FoundNodes)):
+            print(FoundNodes[i].print_Node())
 
 testtree=KD_Tree([2,3])
 testnode=Node([2,5])
@@ -171,10 +274,14 @@ testtree.add_node([3,8])
 testtree.add_node([3,5])
 testtree.add_node([0,8])
 testtree.add_node([0,3])
-testtree.show()
-testtree.contains([2,3])
-testtree.contains([4,6])
+testtree.print()
 testtree.contains([3,8])
+testtree.contains([9,9])
+testtree.search([0,30], 'contained_by')
+print("right of 1")
+testtree.right_of(1)
+print("intersects")
+testtree.search([0,30], 'intersects')
 
 
 
