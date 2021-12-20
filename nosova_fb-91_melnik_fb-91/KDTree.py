@@ -12,7 +12,7 @@ class Interval:
         if self._check(user_x, user_y):
             self.x = user_x
             self.y = user_y
-            print('Interval successfully created!')
+            #print('Interval successfully created!')
         else:
             print('The Interval was not created!')
 
@@ -44,7 +44,7 @@ class Node:
                 self.left_child = lch
                 self.right_child = rch
                 self.parent = p
-                print('New Node is created!')
+                #print('New Node is created!')
             else:
                 print('The Node was not created')
         elif isinstance(decision, Interval):

@@ -3,8 +3,8 @@ import KDTree
 pattern_create = 'CREATE \w{1,10}|a-z A-Z'
 pattern_insert = 'INSERT \w{1,10} \[-?[0-9]*,*-?[0-9]*\]|a-z A-Z|$'
 pattern_print_tree = 'PRINT_TREE \w{1,10}|a-z A-Z'
-pattern_contains = '^CONTAINS \w{1,10} \[[0-9]*,*[0-9]*\]|a-z A-Z|$'
-pattern_search = '^SEARCH \w{1,10} \[?WHERE (CONTAINED_BY \[[0-9],[0-9]\]|INTERSECTS \[[0-9],[0-9]\]|RIGHT_OF [0-9])\]?|a-z A-Z|$'
+pattern_contains = '^CONTAINS \w{1,10} \[-?[0-9]*,*-?[0-9]*\]|a-z A-Z|$'
+pattern_search = '^SEARCH \w{1,10} \[?WHERE (CONTAINED_BY \[-?[0-9],-?[0-9]\]|INTERSECTS \[-?[0-9],-?[0-9]\]|RIGHT_OF -?[0-9])\]?|a-z A-Z|$'
 
 trees = {}
 
@@ -131,14 +131,15 @@ print(
     "You can start with these commands: \n1) CREATE table; \n2) INSERT set_name [0,0]; \n3) PRINT_TREE set_name; \n4) CONTAINS set_name [0,0]; \n5) SEARCH set_name [WHERE ...];\n      a)RIGHT_OF 1\n      b)CONTAINED_BY [0,0]\n      c)INTERSECTS [0,0]\n")
 while(1):
     #command = [input() for _ in range(4) ]
-
     lines = []
     while True:
-        line = input()
+        line = input('> ' if len(lines) == 0 else '... ')
         if line:
             lines.append(line)
-        else:
-            break
+            if ';' in line:
+                break
+
+    #print(lines)
     command = '\n'.join(lines)
     command = command.replace('\n', ' ')
     commands = command.split(';')
@@ -146,6 +147,7 @@ while(1):
     i = 0
     sizeofcommands = len(commands)
     while i < sizeofcommands:
+        #print (i,' ',commands[i])
         commands[i] = delete_space_from_string(commands[i])
         parser(commands[i])
         i += 1
